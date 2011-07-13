@@ -1,0 +1,64 @@
+#!/usr/bin/env perl
+use 5.012;
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use File::Basename;
+
+use Digest::SHA1;
+use LWP::UserAgent;
+use HTTP::Request;
+use JSON qw(to_json);
+
+use constant BLOB_SIZE => 512 * 1024; # 512KB
+
+sub blobref {
+    return "sha1-" . Digest::SHA1::sha1_hex($_[0])
+}
+
+my $server = "http://localhost:5000";
+my $file   = shift @ARGV or die "Usage: @{[ basename($0) ]} <file>\n";
+
+my @refs;
+
+{
+    ## Storing blobs to server
+    my $ua = LWP::UserAgent->new;
+
+    my $blob;
+
+    open my $fh, "<:bytes", $file;
+
+    while (read($fh, $blob, BLOB_SIZE)) {
+        my $ref = blobref($blob);
+        push @refs, $ref;
+
+        my $request  = HTTP::Request->new(PUT => "$server/blobs/$ref", [], $blob);
+        my $response = $ua->request($request);
+
+        unless ($response->is_success) {
+            say STDERR "ERROR Storing $ref";
+        }
+    }
+
+    close($fh);
+}
+
+{
+    ## Creating receipts
+    my $file_basename = basename($file);
+    my $receipt = "${file_basename}.json";
+
+    open my $fh, ">:bytes", $receipt;
+
+    say $fh to_json({
+        name => $file_basename,
+        refs => \@refs
+    });
+
+    close $fh;
+
+    say "Stored. Keep the receipt for future retrieving:\n\n    $receipt\n";
+}
+

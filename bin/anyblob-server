@@ -1,0 +1,16 @@
+#!/usr/bin/env perl
+use 5.012;
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use Cwd qw(abs_path cwd);
+use Anyblob::Server;
+use Plack::Runner;
+
+say abs_path(cwd);
+my $server = Anyblob::Server->new(datastore => abs_path(cwd));
+
+my $runner = Plack::Runner->new;
+$runner->parse_options(@ARGV);
+$runner->run($server->app);
