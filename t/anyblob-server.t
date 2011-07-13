@@ -57,6 +57,41 @@ describe "Anyblob::Server" => sub {
             }
         );
     };
+
+    it "cannot retrieve a non-existing blob" => sub {
+        test_psgi(
+            app => $server->app,
+            client => sub {
+                my $cb = shift;
+                my $response = $cb->(HTTP::Request->new(GET => "http://localhost/blobs/sha1-" . sha1_hex("BOB")));
+                is $response->code, 404;
+                is $response->content, "";
+            }
+        );
+    };
+
+    it "can check the presense or missing of a blob" => sub {
+        test_psgi(
+            app => $server->app,
+            client => sub {
+                my $cb = shift;
+                my $blob = "OHAI\n$$\n";
+                my $ref  = "sha1-" . sha1_hex($blob);
+                # store the blob and assume success.
+                $cb->(HTTP::Request->new(PUT => "http://localhost/blobs/$ref", [], $blob));
+
+                my $response = $cb->(HTTP::Request->new(HEAD => "http://localhost/blobs/$ref"));
+                is $response->code, 200;
+                is $response->content, "";
+
+                $response = $cb->(HTTP::Request->new(HEAD => "http://localhost/blobs/sha1-" . sha1_hex("BOB")));
+                is $response->code, 404;
+                is $response->content, "";
+            }
+        );
+    };
+
+    it "can retrieve the full list of blobs on the server";
 };
 
 runtests unless caller;

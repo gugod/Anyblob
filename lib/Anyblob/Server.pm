@@ -1,6 +1,6 @@
 package Anyblob::Server;
 use 5.012;
-use Mouse;
+use Moose;
 use Plack::Request;
 use Plack::Response;
 use Digest::SHA1;
@@ -9,9 +9,13 @@ use IO::All;
 my $BLOBREF_RE = qr{sha1-[0-9a-f]{40}};
 
 has datastore => (
-    is => "rw",
+    is => "ro",
     isa => "Str",
-    required => 1
+    required => 1,
+    trigger => sub {
+        my ($self, $datastore) = @_;
+        io($datastore)->mkpath unless -d $datastore;
+    }
 );
 
 ## Helpers
@@ -23,6 +27,10 @@ sub blobref {
 ## Actions
 
 sub check {
+    my ($self, $ref) = @_;
+    my $blob_file = io->catfile($self->datastore, "refs", $ref);
+
+    return Plack::Response->new( $blob_file->exists ? 200 : 404 );
 }
 
 sub store {
@@ -66,7 +74,7 @@ sub app {
 
         given([$request->method, $request->path]) {
             when(['HEAD', qr{^/blobs/(${BLOBREF_RE})$}]) {
-                # Check
+                $response = $self->check($1);
             }
             when(['GET', qr{^/blobs/(${BLOBREF_RE})$}]) {
                 $response = $self->retrieve($1);
