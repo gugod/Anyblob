@@ -1,0 +1,44 @@
+#!/usr/bin/env perl
+use 5.012;
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use File::Basename;
+use Digest::SHA1;
+use LWP::UserAgent;
+use HTTP::Request;
+use JSON qw(from_json);
+use IO::All;
+use constant BLOB_SIZE => 512 * 1024; # 512KB
+
+my $server = "http://localhost:5000";
+my $receipt_file = shift @ARGV or die "Usage: @{[ basename($0) ]} <receipt>\n";
+
+my $receipt = from_json( io($receipt_file)->all );
+
+unless( $receipt->{name} && ref($receipt->{refs}) eq 'ARRAY') {
+    die "Invalid receipt file.\n";
+}
+
+if (-f $receipt->{name}) {
+    die "File $receipt->{name} already exists\n";
+}
+
+my $ua = LWP::UserAgent->new;
+open my $fh, ">:bytes", $receipt->{name};
+
+for my $ref (@{ $receipt->{refs} }) {
+    my $request = HTTP::Request->new(GET => "$server/blobs/$ref");
+    my $response = $ua->request($request);
+
+    unless ($response->is_success) {
+        close($fh);
+        unlink $receipt->{name};
+        die "Failed to get blob $ref\n";
+    }
+
+    print $fh $response->content;
+}
+
+say "\n" . $receipt->{name} . " retrieved\n";
