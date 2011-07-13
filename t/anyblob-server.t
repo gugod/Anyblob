@@ -9,6 +9,7 @@ use HTTP::Request;
 use Anyblob::Server;
 use Digest::SHA1 qw(sha1_hex);
 use IO::All;
+use JSON qw(from_json);
 
 describe "Anyblob::Server" => sub {
     my $server;
@@ -91,7 +92,31 @@ describe "Anyblob::Server" => sub {
         );
     };
 
-    it "can retrieve the full list of blobs on the server";
+    it "can retrieve the full list of blobs on the server", sub {
+        my @blobs = qw(OHAI NIHAO GOODMORNING);
+        my @refs  = map { "sha1-" . sha1_hex($_) } @blobs;
+
+        test_psgi(
+            app => $server->app,
+            client => sub {
+                my $cb = shift;
+
+                # Store blobs
+                for my $i (0..$#refs) {
+                    my $ref  = $refs[$i];
+                    my $blob = $blobs[$i];
+                    $cb->(HTTP::Request->new(PUT => "http://localhost/blobs/$ref", [], $blob));
+                }
+
+                my $response = $cb->(HTTP::Request->new(GET => "http://localhost/blobs.json"));
+                my $blobrefs = from_json($response->content);
+                is_deeply(
+                    $blobrefs,
+                    [ sort { $a cmp $b } @refs ]
+                );
+            }
+        );
+    };
 };
 
 runtests unless caller;

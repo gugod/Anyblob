@@ -5,6 +5,7 @@ use Plack::Request;
 use Plack::Response;
 use Digest::SHA1;
 use IO::All;
+use JSON qw(to_json);
 
 my $BLOBREF_RE = qr{sha1-[0-9a-f]{40}};
 
@@ -14,7 +15,10 @@ has datastore => (
     required => 1,
     trigger => sub {
         my ($self, $datastore) = @_;
-        io($datastore)->mkpath unless -d $datastore;
+        unless (-d $datastore) {
+            io($datastore)->mkpath;
+            io->catdir($datastore, "refs")->mkpath;
+        }
     }
 );
 
@@ -62,6 +66,14 @@ sub retrieve {
     return $response;
 }
 
+sub list {
+    my ($self) = @_;
+    my $response = Plack::Response->new(200);
+    my @files = sort { $a cmp $b } io->catdir($self->datastore, "refs")->readdir;
+    $response->body(to_json(\@files));
+    return $response;
+}
+
 ## The app for the server instace
 
 sub app {
@@ -81,6 +93,9 @@ sub app {
             }
             when(['PUT', qr{^/blobs/(${BLOBREF_RE})$}]) {
                 $response = $self->store($1, $request->raw_body);
+            }
+            when(['GET', qr{^/blobs.json$}]) {
+                $response = $self->list;
             }
         }
 
