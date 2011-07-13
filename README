@@ -1,0 +1,62 @@
+-*- org -*-
+
+* Spec (rough)
+** Term  
+   - blob := arbitrary bit sequence of any size.
+   - blobref (or simply ref) := "sha1-" . sha1(blob)
+
+** API
+*** To check the missing of present of blob
+
+    Request:
+
+        HEAD "/blobs/${ref}"
+
+    Response when found:
+
+        Status: 200
+        (No HTTP body)
+
+    Response when not found
+
+        Status: 400
+
+*** To retrieve blob
+
+    Request:
+
+        GET "/blobs/$ref"
+
+    Response when found:
+
+        Status: 200
+        HTTP Body: the blob
+
+    Response when not found:
+
+        Status: 404
+
+*** To store blob
+
+    Request:
+
+        PUT "/blobs/${ref}"
+        post body is the blob
+
+    Response when ref is valid
+
+        Status: 200
+
+    Response when ref is not valid
+
+        Status: 400
+
+*** To synchronize betweet blob server
+
+    GET "/blobs.json"
+    - list of blobrefs as an array of str, encoded to json.
+
+*** Other
+
+    POST "/blobs"
+    - always 405
