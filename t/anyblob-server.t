@@ -3,35 +3,38 @@ use strict;
 use warnings;
 use 5.012;
 use Plack::Test;
-use Test::More;
+use Test::Spec;
 
 use HTTP::Request;
 use Anyblob::Server;
 use Digest::SHA1 qw(sha1_hex);
 use IO::All;
 
-my $server = Anyblob::Server->new(datastore => "/tmp/test-anyblob-server-$$");
+describe "Anyblob::Server" => sub {
+    my $store = "/tmp/test-anyblob-server-$$";
+    my $server = Anyblob::Server->new(datastore => $store);
 
-test_psgi
-    app => $server->app,
-    client => sub {
-        my $cb = shift;
+    it "Can store a blob" => sub {
+        test_psgi(
+            app => $server->app,
+            client => sub {
+                my $cb = shift;
 
-        subtest "Storing the blob" => sub {
-            my $blob = "OHAI\n";
-            my $ref  = "sha1-" . sha1_hex($blob);
+                my $blob = "OHAI\n";
+                my $ref  = "sha1-" . sha1_hex($blob);
 
-            my $request = HTTP::Request->new(PUT => "http://localhost/blobs/$ref", [], $blob);
-            my $response = $cb->($request);
+                my $request = HTTP::Request->new(PUT => "http://localhost/blobs/$ref", [], $blob);
+                my $response = $cb->($request);
 
-            ok $response->is_success;
-            is $response->code, 200;
+                ok $response->is_success;
+                is $response->code, 200;
 
-            ok -f "/tmp/test-anyblob-server-$$/refs/$ref";
-            done_testing;
-        };
+                ok -f "$store/refs/$ref";
+            }
+        );
+
+        io($store)->rmtree;
     };
+};
 
-io("/tmp/test-anyblob-server-$$")->rmtree;
-
-done_testing;
+runtests unless caller;;
