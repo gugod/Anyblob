@@ -41,7 +41,17 @@ sub store {
 }
 
 sub retrieve {
+    my ($self, $ref) = @_;
+    my $response = Plack::Response->new(200);
+    my $blob_file = io->catfile($self->datastore, "refs", $ref);
 
+    unless($blob_file->exists) {
+        $response->status(404);
+        return $response;
+    }
+
+    $response->body($blob_file);
+    return $response;
 }
 
 ## The app for the server instace
@@ -59,7 +69,7 @@ sub app {
                 # Check
             }
             when(['GET', qr{^/blobs/(${BLOBREF_RE})$}]) {
-                # Retrieve
+                $response = $self->retrieve($1);
             }
             when(['PUT', qr{^/blobs/(${BLOBREF_RE})$}]) {
                 $response = $self->store($1, $request->raw_body);
