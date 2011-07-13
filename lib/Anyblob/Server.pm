@@ -47,7 +47,11 @@ sub store {
         return $response;
     }
 
-    io->catfile($self->datastore, "refs", $ref)->assert->binary->print($blob);
+    my $ref_io = io->catfile($self->datastore, "refs", $ref);
+
+    unless ($ref_io->exists) {
+        $ref_io->assert->binary->print($blob);
+    }
 
     return $response;
 }
