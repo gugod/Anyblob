@@ -6,6 +6,7 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use File::Basename;
 
+use Anyblob::Client;
 use Digest::SHA1;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -17,32 +18,15 @@ sub blobref {
     return "sha1-" . Digest::SHA1::sha1_hex($_[0])
 }
 
-my $server = "http://localhost:5000";
 my $file   = shift @ARGV or die "Usage: @{[ basename($0) ]} <file>\n";
 
-my @refs;
+my $server = "http://localhost:5000";
+my $client = Anyblob::Client->new(server => $server);
 
-{
-    ## Storing blobs to server
-    my $ua = LWP::UserAgent->new;
+my @refs = $client->upload($file);
 
-    my $blob;
-
-    open my $fh, "<:bytes", $file;
-
-    while (read($fh, $blob, BLOB_SIZE)) {
-        my $ref = blobref($blob);
-        push @refs, $ref;
-
-        my $request  = HTTP::Request->new(PUT => "$server/blobs/$ref", [], $blob);
-        my $response = $ua->request($request);
-
-        unless ($response->is_success) {
-            say STDERR "ERROR Storing $ref";
-        }
-    }
-
-    close($fh);
+unless (@refs) {
+    die "Error uploading $file";
 }
 
 {
