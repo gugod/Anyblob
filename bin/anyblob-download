@@ -14,23 +14,34 @@ my $USAGE = "Usage: @{[ basename($0) ]} -s <server-url> <receipt.json>\n";
 my $server;
 GetOptions("s|server=s" => \$server) or die "Unreconized command line arguments.";
 
+if (!$server && -f "$ENV{HOME}/.anyblob/config.json") {
+    my $config = from_json(io("$ENV{HOME}/.anyblob/config.json")->all);
+    $server = $config->{server};
+}
+
 die $USAGE unless $server;
 
 my $client = Anyblob::Client->new(server => $server);
 
-my $receipt_file = shift @ARGV or die $USAGE;
-my $receipt = from_json( io($receipt_file)->all );
+die $USAGE unless @ARGV;
 
-unless( $receipt->{name} && ref($receipt->{refs}) eq 'ARRAY') {
-    die "Invalid receipt file.\n";
+for my $receipt_file (@ARGV) {
+    my $receipt = from_json( io($receipt_file)->all );
+
+    unless ( $receipt->{name} && ref($receipt->{refs}) eq 'ARRAY') {
+        warn "Invalid receipt file.\n";
+        next;
+    }
+
+    if (-f $receipt->{name}) {
+        warn "File $receipt->{name} already exists.\n";
+        next;
+    }
+
+    unless ($client->download( $receipt->{name}, $receipt->{refs} )) {
+        warn "Failed to download file $receipt->{name}\n";
+        next;
+    }
+
+    say $receipt->{name} . " download success.";
 }
-
-if (-f $receipt->{name}) {
-    die "File $receipt->{name} already exists.\n";
-}
-
-unless ($client->download( $receipt->{name}, $receipt->{refs} )) {
-    die "Failed to download file $receipt->{name}\n";
-}
-
-say "\n" . $receipt->{name} . " retrieved\n";

@@ -8,12 +8,18 @@ use File::Basename;
 
 use Anyblob::Client;
 
-use JSON qw(to_json);
+use JSON qw(from_json to_json);
 use Getopt::Long;
+use IO::All;
 
 my $USAGE = "Usage: @{[ basename($0) ]} -s <server-url> <file>\n";
 my $server;
 GetOptions("s|server=s" => \$server) or die "Unreconized command line arguments.";
+
+if (!$server && -f "$ENV{HOME}/.anyblob/config.json") {
+    my $config = from_json(io("$ENV{HOME}/.anyblob/config.json")->all);
+    $server = $config->{server};
+}
 
 die $USAGE unless $server;
 my $client = Anyblob::Client->new(server => $server);
