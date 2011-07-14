@@ -18,28 +18,26 @@ GetOptions("s|server=s" => \$server) or die "Unreconized command line arguments.
 die $USAGE unless $server;
 my $client = Anyblob::Client->new(server => $server);
 
-my $file   = shift @ARGV or die "Usage: @{[ basename($0) ]} <file>\n";
+die "Usage: @{[ basename($0) ]} <file1> [<file2> <file3> ...]\n"
+    unless @ARGV;
 
-my @refs = $client->upload($file);
+for my $file (@ARGV) {
+    my @refs = $client->upload($file);
 
-unless (@refs) {
-    die "Error uploading $file";
-}
+    unless (@refs) {
+        say STDERR "Error uploading $file";
+        next;
+    }
 
-{
     ## Creating receipts
     my $file_basename = basename($file);
     my $receipt = "${file_basename}.json";
 
     open my $fh, ">:bytes", $receipt;
 
-    say $fh to_json({
-        name => $file_basename,
-        refs => \@refs
-    });
+    say $fh to_json({ name => $file_basename,  refs => \@refs });
 
     close $fh;
 
-    say "Stored. Keep the receipt for future retrieving:\n\n    $receipt\n";
+    say "${file_basename} is uploaded. Keep the receipt for future download: $receipt.";
 }
-
