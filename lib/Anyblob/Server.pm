@@ -6,6 +6,7 @@ use Plack::Response;
 use Digest::SHA1;
 use IO::All;
 use JSON qw(to_json);
+use Anyblob::Helpers;
 
 my $BLOBREF_RE = qr{sha1-[0-9a-f]{40}};
 
@@ -21,12 +22,6 @@ has datastore => (
         }
     }
 );
-
-## Helpers
-
-sub blobref {
-    return "sha1-" . Digest::SHA1::sha1_hex($_[0])
-}
 
 ## Actions
 
