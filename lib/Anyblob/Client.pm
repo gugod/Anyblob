@@ -5,7 +5,7 @@ use Moose;
 has blob_size => (
     is => "ro",
     isa => "Int",
-    default => 512 * 1024
+    default => 1024 * 1024
 );
 
 has server => (
