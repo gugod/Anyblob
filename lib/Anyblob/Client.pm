@@ -66,7 +66,7 @@ sub upload {
         my $ref = blobref($blob);
 
         unless($self->store($blob)) {
-            say STDERR "ERROR storing $ref";
+            warn "ERROR storing $ref\n";
             return undef;
         }
 
@@ -80,7 +80,26 @@ sub upload {
 
 
 sub download {
-    my ($self, $filename, $refs) = @_;
+    my ($self, $file, $refs) = @_;
+
+    open my $fh, ">:bytes", $file;
+
+    for my $ref (@$refs) {
+        my $request = HTTP::Request->new(GET => $self->server . "/blobs/$ref");
+        my $response = $self->ua->request($request);
+
+        unless ($response->is_success) {
+            close($fh);
+            unlink $file;
+            warn "Failed to retrieve blob $ref\n";
+            return 0;
+        }
+
+        print $fh $response->content;
+    }
+    close($fh);
+
+    return 1;
 }
 
 
