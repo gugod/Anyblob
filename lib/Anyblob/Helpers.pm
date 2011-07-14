@@ -1,6 +1,7 @@
 package Anyblob::Helpers;
 use strict;
 use Exporter::Lite;
+use Digest::SHA1;
 
 our @EXPORT = qw(blobref);
 

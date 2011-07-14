@@ -7,21 +7,18 @@ use lib "$FindBin::Bin/../lib";
 use File::Basename;
 
 use Anyblob::Client;
-use Digest::SHA1;
-use LWP::UserAgent;
-use HTTP::Request;
+
 use JSON qw(to_json);
+use Getopt::Long;
 
-use constant BLOB_SIZE => 512 * 1024; # 512KB
+my $USAGE = "Usage: @{[ basename($0) ]} -s <server-url> <file>\n";
+my $server;
+GetOptions("s|server=s" => \$server) or die "Unreconized command line arguments.";
 
-sub blobref {
-    return "sha1-" . Digest::SHA1::sha1_hex($_[0])
-}
+die $USAGE unless $server;
+my $client = Anyblob::Client->new(server => $server);
 
 my $file   = shift @ARGV or die "Usage: @{[ basename($0) ]} <file>\n";
-
-my $server = "http://localhost:5000";
-my $client = Anyblob::Client->new(server => $server);
 
 my @refs = $client->upload($file);
 

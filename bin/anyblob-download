@@ -8,8 +8,17 @@ use File::Basename;
 use JSON qw(from_json);
 use IO::All;
 use Anyblob::Client;
+use Getopt::Long;
 
-my $receipt_file = shift @ARGV or die "Usage: @{[ basename($0) ]} <receipt>\n";
+my $USAGE = "Usage: @{[ basename($0) ]} -s <server-url> <receipt.json>\n";
+my $server;
+GetOptions("s|server=s" => \$server) or die "Unreconized command line arguments.";
+
+die $USAGE unless $server;
+
+my $client = Anyblob::Client->new(server => $server);
+
+my $receipt_file = shift @ARGV or die $USAGE;
 my $receipt = from_json( io($receipt_file)->all );
 
 unless( $receipt->{name} && ref($receipt->{refs}) eq 'ARRAY') {
@@ -19,9 +28,6 @@ unless( $receipt->{name} && ref($receipt->{refs}) eq 'ARRAY') {
 if (-f $receipt->{name}) {
     die "File $receipt->{name} already exists.\n";
 }
-
-my $server = "http://localhost:5000";
-my $client = Anyblob::Client->new(server => $server);
 
 unless ($client->download( $receipt->{name}, $receipt->{refs} )) {
     die "Failed to download file $receipt->{name}\n";
